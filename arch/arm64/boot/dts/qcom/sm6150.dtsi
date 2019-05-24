@@ -3062,9 +3062,9 @@
 		qcom,pre-scaling = <1 1>;
 	};
 
-	backlight_therm {
+	rf_pa1_therm {
 		reg = <ADC_AMUX_THM3_PU2>;
-		label = "backlight_therm";
+		label = "rf_pa1_therm";
 		qcom,ratiometric;
 		qcom,hw-settle-time = <200>;
 		qcom,pre-scaling = <1 1>;
@@ -3090,7 +3090,7 @@
 &pm6150l_adc_tm {
 	io-channels = <&pm6150l_vadc ADC_AMUX_THM1_PU2>,
 			<&pm6150l_vadc ADC_AMUX_THM2_PU2>,
-			<&pm6150l_vadc ADC_AMUX_THM3_PU2>,
+			<&pm6150l_vadc ADC_GPIO1_PU2>,
 			<&pm6150l_vadc ADC_GPIO4_PU2>;
 
 	/* Channel nodes */
@@ -3106,8 +3106,8 @@
 		qcom,hw-settle-time = <200>;
 	};
 
-        backlight_therm {
-		reg = <ADC_AMUX_THM3_PU2>;
+        camera_flash_therm  {
+		reg = <ADC_GPIO1_PU2>;
 		qcom,ratiometric;
 		qcom,hw-settle-time = <200>;
 	};
