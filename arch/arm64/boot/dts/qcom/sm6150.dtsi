@@ -599,6 +599,12 @@
 			reg = <0x0 0x9f800000 0x0 0x1e00000>;
 		};
 
+		ramoops_mem: ramoops_region@0xa1600000 {
+			compatible = "removed-dma-pool";
+			no-map;
+			reg = <0 0xa1600000 0 0x400000>;
+		};
+
 		adsp_mem: adsp_region {
 			compatible = "shared-dma-pool";
 			alloc-ranges = <0 0x00000000 0 0xffffffff>;
@@ -2971,6 +2977,13 @@
 
 	demux {
 		compatible = "qcom,demux";
+	};
+
+	ramoops {
+		compatible = "ramoops";
+		memory-region = <&ramoops_mem>;
+		console-size = <0x0 0x200000>;
+		pmsg-size = <0x0 0x200000>;
 	};
 };
 
