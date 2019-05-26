@@ -552,11 +552,14 @@ asmlinkage __visible void __init start_kernel(void)
 	build_all_zonelists(NULL);
 	page_alloc_init();
 
-	p = NULL;
+	pr_notice("Kernel command line: %s\n", boot_command_line);
+
 	p = strstr(command_line, "androidboot.fpsensor=fpc");
-	if(p) {
+	if (p) {
+		pr_info("You have fpc scanner\n");
 		fpsensor = 1;//fpc fingerprint
 	} else {
+		pr_info("You have goodix scanner\n");
 		fpsensor = 2;//goodix fingerprint
 	}
 	parse_early_param();
