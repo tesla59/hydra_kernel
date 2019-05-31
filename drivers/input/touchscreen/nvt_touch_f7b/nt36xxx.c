@@ -672,8 +672,8 @@ void nvt_ts_wakeup_gesture_report(uint8_t gesture_id, uint8_t *data)
 	/* support fw specifal data protocol */
 	if ((gesture_id == DATA_PROTOCOL) && (func_type == FUNCPAGE_GESTURE)) {
 		gesture_id = func_id;
-	} else if (gesture_id > DATA_PROTOCOL) {
-		NVT_ERR("gesture_id %d is invalid, func_type=%d, func_id=%d\n", gesture_id, func_type, func_id);
+	} else if ((gesture_id > DATA_PROTOCOL) || (gesture_id < GESTURE_WORD_C)) {
+		pr_debug("gesture_id %d is invalid, func_type=%d, func_id=%d\n", gesture_id, func_type, func_id);
 		return;
 	}
 
