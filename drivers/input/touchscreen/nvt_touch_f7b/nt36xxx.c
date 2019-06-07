@@ -28,7 +28,6 @@
 #include <linux/of_gpio.h>
 #include <linux/of_irq.h>
 #include <linux/workqueue.h>
-#include <linux/pm_qos.h>
 
 #if defined(CONFIG_FB)
 #include <linux/notifier.h>
@@ -48,7 +47,6 @@ char g_lcd_id[128];
 EXPORT_SYMBOL(g_lcd_id);
 extern int lct_nvt_tp_info_node_init(void);
 
-struct pm_qos_request pm_qos_req;
 static void tp_fb_notifier_resume_work(struct work_struct *work);
 
 #if NVT_TOUCH_ESD_PROTECT
@@ -156,7 +154,6 @@ int32_t CTP_I2C_READ(struct i2c_client *client, uint16_t address, uint8_t *buf, 
 	int32_t ret = -1;
 	int32_t retries = 0;
 
-	pm_qos_update_request(&pm_qos_req, 100);
 	mutex_lock(&ts->xbuf_lock);
 
 	msgs[0].flags = !I2C_M_RD;
@@ -179,11 +176,9 @@ int32_t CTP_I2C_READ(struct i2c_client *client, uint16_t address, uint8_t *buf, 
 		NVT_ERR("error, ret=%d\n", ret);
 		ret = -EIO;
 	}
-
 	memcpy(buf + 1, ts->xbuf, len - 1);
 
 	mutex_unlock(&ts->xbuf_lock);
-	pm_qos_update_request(&pm_qos_req, PM_QOS_DEFAULT_VALUE);
 
 	return ret;
 }
@@ -201,7 +196,6 @@ int32_t CTP_I2C_WRITE(struct i2c_client *client, uint16_t address, uint8_t *buf,
 	int32_t ret = -1;
 	int32_t retries = 0;
 
-	pm_qos_update_request(&pm_qos_req, 100);
 	mutex_lock(&ts->xbuf_lock);
 
 	msg.flags = !I2C_M_RD;
@@ -222,7 +216,6 @@ int32_t CTP_I2C_WRITE(struct i2c_client *client, uint16_t address, uint8_t *buf,
 	}
 
 	mutex_unlock(&ts->xbuf_lock);
-	pm_qos_update_request(&pm_qos_req, PM_QOS_DEFAULT_VALUE);
 
 	return ret;
 }
@@ -679,8 +672,8 @@ void nvt_ts_wakeup_gesture_report(uint8_t gesture_id, uint8_t *data)
 	/* support fw specifal data protocol */
 	if ((gesture_id == DATA_PROTOCOL) && (func_type == FUNCPAGE_GESTURE)) {
 		gesture_id = func_id;
-	} else if ((gesture_id > DATA_PROTOCOL) || (gesture_id < GESTURE_WORD_C)) {
-		pr_debug("gesture_id %d is invalid, func_type=%d, func_id=%d\n", gesture_id, func_type, func_id);
+	} else if (gesture_id > DATA_PROTOCOL) {
+		NVT_ERR("gesture_id %d is invalid, func_type=%d, func_id=%d\n", gesture_id, func_type, func_id);
 		return;
 	}
 
@@ -898,9 +891,18 @@ static void nvt_ts_work_func(struct work_struct *work)
 
 	mutex_lock(&ts->lock);
 
-	ret = CTP_I2C_READ(ts->client, I2C_FW_Address, point_data, POINT_DATA_LEN + 1);
-	if (ret < 0)
-		goto XFER_ERROR;
+	while(i++ < 5) {
+		ret = CTP_I2C_READ(ts->client, I2C_FW_Address, point_data, POINT_DATA_LEN + 1);
+		if (ret < 0) {
+			if (i == 5) {
+				NVT_ERR("CTP_I2C_READ failed.(%d)\n", ret);
+				goto XFER_ERROR;
+			}
+			msleep(50);
+		} else
+			break;
+	}
+
 
 #if NVT_TOUCH_ESD_PROTECT
 	if (nvt_fw_recovery(point_data)) {
@@ -913,11 +915,11 @@ static void nvt_ts_work_func(struct work_struct *work)
 	if (bTouchIsAwake == 0) {
 		input_id = (uint8_t)(point_data[1] >> 3);
 		nvt_ts_wakeup_gesture_report(input_id, point_data);
-		goto XFER_ERROR;
+		enable_irq(ts->client->irq);
+		mutex_unlock(&ts->lock);
+		return;
 	}
 #endif
-
-	mutex_unlock(&ts->lock);
 
 	finger_cnt = 0;
 
@@ -1014,7 +1016,6 @@ XFER_ERROR:
 	enable_irq(ts->client->irq);
 
 	mutex_unlock(&ts->lock);
-	return;
 }
 
 /*******************************************************
@@ -1488,7 +1489,6 @@ static int32_t nvt_ts_remove(struct i2c_client *client)
 	free_irq(client->irq, ts);
 	input_unregister_device(ts->input_dev);
 	i2c_set_clientdata(client, NULL);
-	pm_qos_remove_request(&pm_qos_req);
 	kfree(ts);
 
 	return 0;
@@ -1840,19 +1840,8 @@ return:
 static int32_t __init nvt_driver_init(void)
 {
 	int32_t ret = 0;
-	int cpu;
 
 	NVT_LOG("start\n");
-
-	pm_qos_req.type = PM_QOS_REQ_AFFINE_CORES;
-	cpumask_empty(&pm_qos_req.cpus_affine);
-	for_each_possible_cpu(cpu) {
-		if (cpumask_test_cpu(cpu, cpu_perf_mask))
-			cpumask_set_cpu(cpu, &pm_qos_req.cpus_affine);
-	}
-	pm_qos_add_request(&pm_qos_req, PM_QOS_CPU_DMA_LATENCY,
-			PM_QOS_DEFAULT_VALUE);
-
 	if (IS_ERR_OR_NULL(g_lcd_id)){
 		NVT_ERR("g_lcd_id is ERROR!\n");
 		goto err_lcd;
