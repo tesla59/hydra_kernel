@@ -109,7 +109,7 @@ static int vreg_setup(struct fpc1020_data *fpc1020, const char *name,
 	for (i = 0; i < ARRAY_SIZE(fpc1020->vreg); i++) {
 		const char *n = vreg_conf[i].name;
 
-		if (!strncmp(n, name, strlen(n)))
+		if (!strcmp(n, name))
 			goto found;
 	}
 
@@ -189,9 +189,9 @@ static ssize_t fingerdown_wait_set(struct device *dev,
 	struct fpc1020_data *fpc1020 = dev_get_drvdata(dev);
 
 	dev_dbg(fpc1020->dev, "%s\n", __func__);
-	if (!strncmp(buf, "enable", strlen("enable"))) {
+	if (!strcmp(buf, "enable")) {
 		fpc1020->wait_finger_down = true;
-	} else if (!strncmp(buf, "disable", strlen("disable"))) {
+	} else if (!strcmp(buf, "disable")) {
 		fpc1020->wait_finger_down = false;
 	} else
 		return -EINVAL;
@@ -222,7 +222,7 @@ static int select_pin_ctl(struct fpc1020_data *fpc1020, const char *name)
 	for (i = 0; i < ARRAY_SIZE(fpc1020->pinctrl_state); i++) {
 		const char *n = pctl_names[i];
 
-		if (!strncmp(n, name, strlen(n))) {
+		if (!strcmp(n, name)) {
 			rc = pinctrl_select_state(fpc1020->fingerprint_pinctrl,
 					fpc1020->pinctrl_state[i]);
 			if (rc)
@@ -285,21 +285,23 @@ static ssize_t irq_enable_set(struct device *dev,
 	const char *buf, size_t count)
 {
 	int rc = 0;
+	u64 val;
 	struct fpc1020_data *fpc1020 = dev_get_drvdata(dev);
 
-	if (!strncmp(buf, "1", strlen("1"))) {
-		mutex_lock(&fpc1020->lock);
-		enable_irq(gpio_to_irq(fpc1020->irq_gpio));
-		mutex_unlock(&fpc1020->lock);
-		pr_debug("fpc enable irq\n");
-	} else if (!strncmp(buf, "0", strlen("0"))) {
-		mutex_lock(&fpc1020->lock);
-		disable_irq(gpio_to_irq(fpc1020->irq_gpio));
-		mutex_unlock(&fpc1020->lock);
-		pr_debug("fpc disable irq\n");
-	}
+	rc = kstrtou64(buf, 0, &val);
 
-	return rc ? rc : count;
+	mutex_lock(&fpc1020->lock);
+	if (val == 1)
+		enable_irq(gpio_to_irq(fpc1020->irq_gpio));
+	else if (val == 0)
+		disable_irq(gpio_to_irq(fpc1020->irq_gpio));
+	else {
+		mutex_unlock(&fpc1020->lock);
+		return -ENOENT;
+	}
+	mutex_unlock(&fpc1020->lock);
+
+	return strnlen(buf, count);
 }
 static DEVICE_ATTR(irq_enable, S_IWUSR | S_IRUSR | S_IRGRP | S_IWGRP , NULL, irq_enable_set);
 
@@ -336,7 +338,7 @@ static ssize_t hw_reset_set(struct device *dev,
 	int rc;
 	struct fpc1020_data *fpc1020 = dev_get_drvdata(dev);
 
-	if (!strncmp(buf, "reset", strlen("reset"))) {
+	if (!strcmp(buf, "reset")) {
 		mutex_lock(&fpc1020->lock);
 		rc = hw_reset(fpc1020);
 		mutex_unlock(&fpc1020->lock);
@@ -421,9 +423,9 @@ static ssize_t device_prepare_set(struct device *dev,
 	int rc;
 	struct fpc1020_data *fpc1020 = dev_get_drvdata(dev);
 
-	if (!strncmp(buf, "enable", strlen("enable")))
+	if (!strcmp(buf, "enable"))
 		rc = device_prepare(fpc1020, true);
-	else if (!strncmp(buf, "disable", strlen("disable")))
+	else if (!strcmp(buf, "disable"))
 		rc = device_prepare(fpc1020, false);
 	else
 		return -EINVAL;
@@ -443,9 +445,9 @@ static ssize_t wakeup_enable_set(struct device *dev,
 	ssize_t ret = count;
 
 	mutex_lock(&fpc1020->lock);
-	if (!strncmp(buf, "enable", strlen("enable")))
+	if (!strcmp(buf, "enable"))
 		atomic_set(&fpc1020->wakeup_enabled, 1);
-	else if (!strncmp(buf, "disable", strlen("disable")))
+	else if (!strcmp(buf, "disable"))
 		atomic_set(&fpc1020->wakeup_enabled, 0);
 	else
 		ret = -EINVAL;
