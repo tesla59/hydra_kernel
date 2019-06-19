@@ -364,24 +364,18 @@ static DEVICE_ATTR(hw_reset, S_IWUSR, NULL, hw_reset_set);
  */
 static int device_prepare(struct fpc1020_data *fpc1020, bool enable)
 {
-	int rc;
+	int rc, i;
 
 	mutex_lock(&fpc1020->lock);
 	if (enable && !fpc1020->prepared) {
 		fpc1020->prepared = true;
 		select_pin_ctl(fpc1020, "fpc1020_reset_reset");
 
-		rc = vreg_setup(fpc1020, "vcc_spi", true);
-		if (rc)
-			goto exit;
-
-		rc = vreg_setup(fpc1020, "vdd_io", true);
-		if (rc)
-			goto exit_1;
-
-		rc = vreg_setup(fpc1020, "vdd_ana", true);
-		if (rc)
-			goto exit_2;
+		for (i = 0; i < ARRAY_SIZE(fpc1020->vreg); i++) {
+			rc = vreg_setup(fpc1020, vreg_conf[i].name, true);
+			if (rc)
+				goto exit;
+		}
 
 		usleep_range(PWR_ON_SLEEP_MIN_US, PWR_ON_SLEEP_MAX_US);
 
@@ -390,25 +384,27 @@ static int device_prepare(struct fpc1020_data *fpc1020, bool enable)
 		 * on the sensor after power up to be sure that the sensor is
 		 * in a good state after power up. Okeyed by ASIC. */
 
-		(void)select_pin_ctl(fpc1020, "fpc1020_reset_active");
+		select_pin_ctl(fpc1020, "fpc1020_reset_active");
 	} else if (!enable && fpc1020->prepared) {
-		rc = 0;
-		(void)select_pin_ctl(fpc1020, "fpc1020_reset_reset");
+		select_pin_ctl(fpc1020, "fpc1020_reset_reset");
 
 		usleep_range(PWR_ON_SLEEP_MIN_US, PWR_ON_SLEEP_MAX_US);
+		rc = 0;
+		goto exit;
 
-		(void)vreg_setup(fpc1020, "vdd_ana", false);
-exit_2:
-		(void)vreg_setup(fpc1020, "vdd_io", false);
-exit_1:
-		(void)vreg_setup(fpc1020, "vcc_spi", false);
-exit:
-		fpc1020->prepared = false;
 	} else {
 		rc = 0;
 	}
 	mutex_unlock(&fpc1020->lock);
 
+	return rc;
+
+exit:
+	for (i = 0; i < ARRAY_SIZE(fpc1020->vreg); i++)
+		vreg_setup(fpc1020, vreg_conf[i].name, false);
+
+	fpc1020->prepared = false;
+	mutex_unlock(&fpc1020->lock);
 	return rc;
 }
 
@@ -715,7 +711,7 @@ static int fpc1020_probe(struct platform_device *pdev)
 
 	if (of_property_read_bool(dev->of_node, "fpc,enable-on-boot")) {
 		dev_info(dev, "Enabling hardware\n");
-		(void)device_prepare(fpc1020, true);
+		device_prepare(fpc1020, true);
 	}
 
 	rc = hw_reset(fpc1020);
@@ -743,12 +739,14 @@ exit:
 static int fpc1020_remove(struct platform_device *pdev)
 {
 	struct fpc1020_data *fpc1020 = platform_get_drvdata(pdev);
+	int i;
+
 	msm_drm_unregister_client(&fpc1020->fb_notifier);
 	sysfs_remove_group(&pdev->dev.kobj, &attribute_group);
 	mutex_destroy(&fpc1020->lock);
-	(void)vreg_setup(fpc1020, "vdd_ana", false);
-	(void)vreg_setup(fpc1020, "vdd_io", false);
-	(void)vreg_setup(fpc1020, "vcc_spi", false);
+	for (i = 0; i < ARRAY_SIZE(fpc1020->vreg); i++)
+		vreg_setup(fpc1020, vreg_conf[i].name, false);
+
 	remove_proc_entry(PROC_NAME,NULL);
 	dev_info(&pdev->dev, "%s\n", __func__);
 
