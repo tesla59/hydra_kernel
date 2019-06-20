@@ -514,7 +514,7 @@ static irqreturn_t fpc1020_irq_handler(int irq, void *handle)
 
 	dev_dbg(fpc1020->dev, "%s\n", __func__);
 
-	if (atomic_read(&fpc1020->wakeup_enabled)) {
+	if (atomic_read(&fpc1020->wakeup_enabled) && !fpc1020->ttw_ws.active) {
 		__pm_wakeup_event(&fpc1020->ttw_ws, FPC_TTW_HOLD_TIME);//for kernel 4.9
 	}
 
