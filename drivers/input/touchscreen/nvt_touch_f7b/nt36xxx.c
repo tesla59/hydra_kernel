@@ -27,7 +27,6 @@
 #include <linux/input/mt.h>
 #include <linux/of_gpio.h>
 #include <linux/of_irq.h>
-#include <linux/workqueue.h>
 
 #if defined(CONFIG_FB)
 #include <linux/notifier.h>
@@ -1022,7 +1021,7 @@ static irqreturn_t nvt_ts_irq_handler(int32_t irq, void *dev_id)
 	disable_irq_nosync(ts->client->irq);
 
 #if WAKEUP_GESTURE
-	if (unlikely(bTouchIsAwake == 0)) {
+	if (bTouchIsAwake == 0) {
 		__pm_wakeup_event(&gestrue_wakelock, msecs_to_jiffies(5000));
 	}
 #endif
@@ -1249,7 +1248,7 @@ static int32_t nvt_ts_probe(struct i2c_client *client, const struct i2c_device_i
 	mutex_unlock(&ts->lock);
 
 	//---create workqueue---
-	nvt_wq = alloc_workqueue("nvt_wq", WQ_HIGHPRI, 0);
+	nvt_wq = create_workqueue("nvt_wq");
 	if (!nvt_wq) {
 		NVT_ERR("nvt_wq create workqueue failed\n");
 		ret = -ENOMEM;
