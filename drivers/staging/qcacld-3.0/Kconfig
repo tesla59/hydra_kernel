@@ -42,7 +42,7 @@ config QCACLD_FEATURE_METERING
 	bool "Enable stats & quota metering feature"
 	default n
 
-config QCACLD_FEATURE_HW_CAPABILITY)
+config QCACLD_FEATURE_HW_CAPABILITY
         bool "Enable hw capability"
         default n
 
