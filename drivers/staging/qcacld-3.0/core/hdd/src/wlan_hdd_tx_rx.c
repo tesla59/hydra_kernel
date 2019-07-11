@@ -41,7 +41,6 @@
 #include <net/cfg80211.h>
 #include <net/ieee80211_radiotap.h>
 #include "sap_api.h"
-#include "sme_power_save_api.h"
 #include "wlan_hdd_wmm.h"
 #include "wlan_hdd_tdls.h"
 #include "wlan_hdd_ocb.h"
@@ -62,7 +61,7 @@
 
 #include "wlan_hdd_nud_tracking.h"
 
-#ifdef QCA_LL_TX_FLOW_CONTROL_V2
+#if defined(QCA_LL_TX_FLOW_CONTROL_V2) || defined(QCA_LL_PDEV_TX_FLOW_CONTROL)
 /*
  * Mapping Linux AC interpretation to SME AC.
  * Host has 5 tx queues, 4 flow-controlled queues for regular traffic and
