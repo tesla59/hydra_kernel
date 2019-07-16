@@ -23,7 +23,6 @@
 #include <linux/types.h>
 #include <linux/kernel.h>
 #include <linux/interrupt.h>
-#include <linux/rcupdate.h>
 
 #include "rcu_segcblist.h"
 
