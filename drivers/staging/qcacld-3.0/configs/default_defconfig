@@ -42,7 +42,6 @@ ifeq ($(CONFIG_ICNSS), y)
 	endif
 endif
 
-DEVELOPER_DISABLE_BUILD_TIMESTAMP := y
 ifneq ($(DEVELOPER_DISABLE_BUILD_TIMESTAMP), y)
 ifneq ($(WLAN_DISABLE_BUILD_TAG), y)
 CONFIG_BUILD_TAG := y
@@ -494,6 +493,12 @@ endif
 endif
 
 ifeq ($(CONFIG_ARCH_LITO), y)
+ifeq ($(CONFIG_IPA_OFFLOAD), y)
+CONFIG_ENABLE_SMMU_S1_TRANSLATION := y
+endif
+endif
+
+ifeq ($(CONFIG_ARCH_ATOLL), y)
 ifeq ($(CONFIG_IPA_OFFLOAD), y)
 CONFIG_ENABLE_SMMU_S1_TRANSLATION := y
 endif
