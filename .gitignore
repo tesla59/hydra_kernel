@@ -125,3 +125,11 @@ all.config
 
 # fetched Android config fragments
 kernel/configs/android-*.cfg
+
+clang
+credentials
+full.log
+gcc*
+kernel.sh
+out
+zipper
