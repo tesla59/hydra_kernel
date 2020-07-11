@@ -1,0 +1,5 @@
+tasks:
+  - command: wget https://raw.githubusercontent.com/tesla59/scripts/master/kernel.sh
+    command: bash kernel.sh
+    command: echo "export ID=\"-1001332755454\""" > credentials.sh
+    command: echo "export token=\"1216142934:AAHUBCyMmOfR9y5njSY5cgL3Aa_AHbZde1A\"" > credentials.sh
