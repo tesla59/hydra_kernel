@@ -1,0 +1,18 @@
+version: 2.1
+jobs:
+  compile:
+   docker:
+      - image: ubuntu:18.04
+   steps:
+      - run:
+          command: |
+           apt-get -y update && apt-get -y upgrade && apt-get -y install bc build-essential zip gcc clang libc6 curl libstdc++6 git wget libssl-dev zstd
+           git clone --depth=1 https://github.com/tesla59/hydra_kernel -b ten
+           cd hydra_kernel
+           wget https://raw.githubusercontent.com/tesla59/scripts/master/kernel.sh
+           source kernel.sh
+workflows:
+  version: 2.1
+  cooking:
+    jobs:
+      - compile
